@@ -1,0 +1,33 @@
+# Streamlit y componentes
+streamlit==1.33.0
+streamlit-authenticator==0.2.3
+streamlit-option-menu==0.3.6
+watchdog==4.0.0
+
+# HTTP requests
+requests==2.31.0
+httpx==0.26.0
+
+# Utilidades
+python-dotenv==1.0.0
+pandas==2.1.4
+plotly==5.18.0
+
+# Validación
+pydantic==2.5.3
+email-validator==2.1.0
+
+# Manejo de archivos
+python-multipart==0.0.6
+
+# Fechas
+python-dateutil==2.8.2
+
+# Gráficos y visualización
+altair==5.2.0
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Excel/CSV
+openpyxl==3.1.2
+xlsxwriter==3.1.9

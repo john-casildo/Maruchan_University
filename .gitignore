@@ -1,0 +1,5 @@
+# Ignorar entorno y secretos
+
+__pycache__/
+maruchan_storage/
+postgres_data/
