@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from database import get_db
 from models import User, Message, UserRole
-from schemas import MessageCreate, MessageResponse, UserList
+from schemas import MessageCreate, ChatMessageResponse, UserList 
 from dependencies import get_current_user
 
 router = APIRouter(
@@ -20,7 +20,6 @@ async def get_online_users(
     current_user: User = Depends(get_current_user)
 ):
     """Devuelve usuarios activos en los últimos 15 minutos"""
-    # Actualizar 'ahora' al consultar esto
     current_user.last_login = datetime.utcnow()
     db.commit()
     
@@ -28,13 +27,13 @@ async def get_online_users(
     
     users = db.query(User).filter(
         User.last_login >= time_threshold,
-        User.id != current_user.id, # No mostrarse a uno mismo
+        User.id != current_user.id,
         User.is_active == True
     ).all()
     
     return users
 
-@router.post("/send", response_model=MessageResponse)
+@router.post("/send", response_model=ChatMessageResponse) 
 async def send_message(
     msg_data: MessageCreate,
     db: Session = Depends(get_db),
@@ -49,7 +48,7 @@ async def send_message(
     db.commit()
     db.refresh(new_msg)
     
-    return MessageResponse(
+    return ChatMessageResponse(
         id=new_msg.id,
         sender_id=new_msg.sender_id,
         sender_name=current_user.full_name,
@@ -58,7 +57,7 @@ async def send_message(
         timestamp=new_msg.timestamp
     )
 
-@router.get("/history/{other_user_id}", response_model=List[MessageResponse])
+@router.get("/history/{other_user_id}", response_model=List[ChatMessageResponse])
 async def get_chat_history(
     other_user_id: int,
     db: Session = Depends(get_db),
@@ -75,7 +74,7 @@ async def get_chat_history(
     result = []
     for m in messages:
         sender = db.query(User).filter(User.id == m.sender_id).first()
-        result.append(MessageResponse(
+        result.append(ChatMessageResponse(
             id=m.id,
             sender_id=m.sender_id,
             sender_name=sender.full_name if sender else "Desconocido",

@@ -509,7 +509,7 @@ class MessageCreate(BaseModel):
     receiver_id: int
     content: str
 
-class MessageResponse(BaseModel):
+class ChatMessageResponse(BaseModel):
     id: int
     sender_id: int
     sender_name: str
@@ -519,3 +519,14 @@ class MessageResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+# ==================== USER PASSWORD UPDATE SCHEMA ====================        
+class UserPasswordUpdate(BaseModel):
+    password: str = Field(..., min_length=8)
+    password_confirm: str
+
+    @validator('password_confirm')
+    def passwords_match(cls, v, values):
+        if 'password' in values and v != values['password']:
+            raise ValueError('Las contraseñas no coinciden')
+        return v

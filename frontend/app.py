@@ -33,11 +33,10 @@ st.markdown("""
         to { transform: translateY(0); opacity: 1; }
     }
 
-    /* --- ESTILOS DEL LANDING --- */
+    /* --- ESTILOS GENERALES --- */
     .main-header {
-        font-size: 4rem; /* Un poco más grande */
+        font-size: 4rem;
         font-weight: 900;
-        /* Gradiente animado */
         background: linear-gradient(270deg, #e63946, #fca311, #e63946);
         background-size: 200% 200%;
         -webkit-background-clip: text;
@@ -57,50 +56,118 @@ st.markdown("""
         opacity: 0.9;
     }
 
-    /* Tarjetas mejoradas */
+    /* Tarjetas */
     .feature-card {
-        /* Glassmorphism adaptable */
         background-color: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(128, 128, 128, 0.2);
         padding: 30px;
         border-radius: 16px;
-        border-top: 4px solid #e63946; /* Borde arriba queda más elegante */
+        border-top: 4px solid #e63946;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         height: 100%;
         transition: all 0.3s ease;
-        animation: slide-up 0.8s ease-out; /* Entrada suave al cargar */
+        animation: slide-up 0.8s ease-out;
     }
     
     .feature-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.12);
         background-color: rgba(255, 255, 255, 0.1);
-        border-top: 4px solid #fca311; /* Cambia de color al pasar el mouse */
+        border-top: 4px solid #fca311;
     }
     
-    .card-icon {
-        font-size: 2.5rem;
-        margin-bottom: 15px;
-        display: block;
-    }
+    .card-icon { font-size: 2.5rem; margin-bottom: 15px; display: block; }
 
-    .stButton>button {
+    /* --- SISTEMA DE COLORES DE BOTONES --- */
+    
+    /* Reglas base para TODOS los botones */
+    .stButton > button {
         border-radius: 25px;
         font-weight: bold;
         width: 100%;
-        border: none;
         padding-top: 10px;
         padding-bottom: 10px;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none !important;
+        color: white !important; /* Texto blanco siempre */
+    }
+    .stButton > button:hover { transform: scale(1.03); }
+
+    /* 1. ROJO (type="primary"): Eliminar, Salir, Desactivar */
+    div.stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, #d90429 0%, #ef233c 100%);
+        box-shadow: 0 4px 6px rgba(217, 4, 41, 0.3);
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background: linear-gradient(90deg, #b00020 0%, #d90429 100%);
+    }
+
+    /* 2. AZUL (type="secondary" - Default): Editar, Guardar Cambios, Botones generales */
+    div.stButton > button[kind="secondary"] {
+        background: linear-gradient(90deg, #0077b6 0%, #0096c7 100%);
+        box-shadow: 0 4px 6px rgba(0, 119, 182, 0.3);
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background: linear-gradient(90deg, #023e8a 0%, #0077b6 100%);
+    }
+
+    /* 3. VERDE (Clase personalizada): Crear, Inscribir, Enviar Tarea */
+    /* Truco: Busca el span invisible .btn-green justo antes del botón */
+    .btn-green + div.stButton > button {
+        background: linear-gradient(90deg, #2a9d8f 0%, #264653 100%) !important;
+        box-shadow: 0 4px 6px rgba(42, 157, 143, 0.3) !important;
+    }
+
+    /* 4. ESPECIAL (Clase personalizada): Login, Inicio */
+    .btn-special + div.stButton > button {
+        background: linear-gradient(270deg, #e63946, #fca311, #e63946) !important;
+        background-size: 200% 200% !important;
+        animation: gradient-animation 3s ease infinite !important;
+        box-shadow: 0 4px 10px rgba(230, 57, 70, 0.4) !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Extra: Botones de enlace (Descargas) en Azul también */
+    .stLinkButton > a {
+        background: linear-gradient(90deg, #48cae4 0%, #0077b6 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 25px !important;
+        font-weight: bold !important;
+        text-align: center !important;
     }
     
-    .stButton>button:hover {
-        transform: scale(1.03);
-    }
     </style>
 """, unsafe_allow_html=True)
 
 # ==================== FUNCIONES DE API ====================
+
+
+def set_btn_style(style="green"):
+    """
+    Inyecta una marca invisible para que el CSS pinte el siguiente botón.
+    Opciones: 'green' (Crear/Éxito), 'special' (Animado).
+    """
+    style_class = "btn-green" if style == "green" else "btn-special"
+    st.markdown(f'<span class="{style_class}"></span>', unsafe_allow_html=True)
+
+def change_password_api(token: str, user_id: int, new_password: str):
+    """Llama al endpoint de cambio de contraseña"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        data = {
+            "password": new_password,
+            "password_confirm": new_password
+        }
+        response = requests.patch(
+            f"{API_URL}/api/users/{user_id}/password",
+            headers=headers,
+            json=data
+        )
+        if response.status_code == 200:
+            return True, response.json()
+        return False, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
 
 def get_admins(token):
     try:
@@ -110,6 +177,28 @@ def get_admins(token):
             return response.json()
         return []
     except: return []
+    
+def update_user_admin_api(token: str, user_id: int, user_data: dict):
+    """Permite al admin editar cualquier usuario"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.put(f"{API_URL}/api/users/{user_id}", headers=headers, json=user_data)
+        if response.status_code == 200:
+            return True, response.json()
+        return False, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
+
+def delete_user_api(token: str, user_id: int):
+    """Permite al admin eliminar un usuario permanentemente"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.delete(f"{API_URL}/api/users/{user_id}", headers=headers)
+        if response.status_code == 200:
+            return True, response.json()
+        return False, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
 
 def get_online_users_api(token):
     try:
@@ -338,41 +427,35 @@ if "page" not in st.session_state:
 # ==================== LANDING PAGE ====================
 
 def show_landing_page():
-    # Espaciado superior para que no quede pegado al techo
     st.write("") 
-    
-    # 1. Título Animado y Subtítulo
     st.markdown('<h1 class="main-header">🍜 Maruchan University</h1>', unsafe_allow_html=True)
     st.markdown(
         '<p class="sub-header">Formación académica lista en 3 minutos. <br>Nútrete de conocimiento.</p>', 
         unsafe_allow_html=True
     )
     
-    # 2. Sección Hero (Imagen y Call to Action)
     with st.container():
-        # Usamos columnas centradas para la imagen
         _, col_img, _ = st.columns([1, 6, 1]) 
         with col_img:
-            # Usamos una imagen más abstracta/tecnológica
             st.image(
                 "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1470&auto=format&fit=crop", 
                 caption="Campus Virtual de Alta Velocidad",
                 use_column_width=True
             )
         
-        st.write("") # Espacio
+        st.write("")
         
-        # Botón de ingreso centrado y llamativo
         col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
         with col_b2:
             st.markdown("### 🚀 Comienza tu viaje ahora")
-            if st.button("🔐 Acceder al Portal Estudiantil", type="primary", use_container_width=True):
+            # BOTÓN ESPECIAL ANIMADO
+            set_btn_style("special")
+            if st.button("🔐 Acceder al Portal Estudiantil", use_container_width=True):
                 st.session_state.page = "login"
                 st.rerun()
             
     st.markdown("---")
     
-    # 3. Sección de Características (NUEVO CONTENIDO)
     st.subheader("🎓 ¿Por qué elegirnos?")
     st.write("Olvídate de la burocracia. Aquí nos enfocamos en resultados inmediatos.")
     st.write("")
@@ -384,57 +467,72 @@ def show_landing_page():
         <div class="feature-card">
             <span class="card-icon">⚡</span>
             <h3>Metodología Ágil</h3>
-            <p>
-                ¿4 años de carrera? Aquí aprendes lo esencial mientras hierves el agua. 
-                Programas intensivos diseñados para la eficiencia máxima.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>¿4 años de carrera? Aquí aprendes lo esencial mientras hierves el agua.</p>
+        </div>""", unsafe_allow_html=True)
         
     with c2:
         st.markdown("""
         <div class="feature-card">
             <span class="card-icon">🌍</span>
             <h3>Global Networking</h3>
-            <p>
-                Conecta con una comunidad de "Noodle-Thinkers" alrededor del mundo. 
-                Colabora en proyectos reales y expande tus fronteras.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+            <p>Conecta con una comunidad de "Noodle-Thinkers" alrededor del mundo.</p>
+        </div>""", unsafe_allow_html=True)
         
     with c3:
         st.markdown("""
         <div class="feature-card">
             <span class="card-icon">🏆</span>
             <h3>Prestigio Instantáneo</h3>
-            <p>
-                Obtén certificaciones digitales verificables al instante. 
-                Títulos que duran para siempre, no solo hasta la próxima comida.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    st.write("")
+            <p>Obtén certificaciones digitales verificables al instante.</p>
+        </div>""", unsafe_allow_html=True)
     st.write("")
 
 # ==================== PANEL DE ADMIN  ====================
 
+import streamlit as st
+import pandas as pd
+# Asegúrate de importar tus funciones de API aquí (get_all_users, create_course_api, etc.)
+
+# --- FUNCIÓN AUXILIAR PARA ESTILOS (BOTÓN VERDE) ---
+def set_btn_style(color="green"):
+    """
+    Inyecta CSS para cambiar el color del siguiente botón primario o secundario renderizado.
+    """
+    color_map = {
+        "green": {"bg": "#28a745", "hover": "#218838", "font": "white"},
+        "blue":  {"bg": "#007bff", "hover": "#0069d9", "font": "white"},
+    }
+    style = color_map.get(color, color_map["green"])
+    
+    st.markdown(f"""
+        <style>
+        div.stButton > button:first-child {{
+            background-color: {style['bg']} !important;
+            color: {style['font']} !important;
+            border-color: {style['bg']} !important;
+        }}
+        div.stButton > button:first-child:hover {{
+            background-color: {style['hover']} !important;
+            border-color: {style['hover']} !important;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
+# --- FUNCIÓN PRINCIPAL DEL PANEL ---
 def show_admin_panel():
     st.title("🛠️ Panel de Administración")
     st.info("Bienvenido al centro de control de Maruchan University.")
     
-    # Menú interno de admin con diseño de pestañas NUEVO
     tabs = st.tabs(["👥 Gestión de Usuarios", "📚 Cursos", "📝 Inscripciones", "➕ Crear Usuario"])
     
-    # --- TAB 1: GESTIÓN DE USUARIOS (NUEVO: Con Tabla Pandas) ---
+    # ==========================================
+    # TAB 1: GESTIÓN DE USUARIOS
+    # ==========================================
     with tabs[0]:
         st.subheader("Directorio de Usuarios")
-        
-        # Filtros
         col_f1, col_f2 = st.columns([3, 1])
         with col_f1:
-            search = st.text_input("🔍 Buscar por nombre, email o carnet", placeholder="Ej: Juan Pérez")
+            search = st.text_input("🔍 Buscar por nombre...", placeholder="Ej: Juan Pérez")
         with col_f2:
             role_filter = st.selectbox("Filtrar por Rol", ["Todos", "student", "teacher", "admin"])
         
@@ -442,219 +540,236 @@ def show_admin_panel():
         
         if users:
             df = pd.DataFrame(users)
-            
             if not df.empty:
+                # Procesamiento visual
                 df['Estado'] = df['is_active'].apply(lambda x: '🟢 Activo' if x else '🔴 Inactivo')
                 
-                if role_filter != "Todos":
+                # Filtros
+                if role_filter != "Todos": 
                     df = df[df['role'] == role_filter]
-                if search:
+                if search: 
                     df = df[df['full_name'].str.contains(search, case=False) | df['email'].str.contains(search, case=False)]
                 
-                # Mostrar tabla interactiva
+                # Tabla Principal
                 st.dataframe(
-                    df[['id', 'full_name', 'email', 'role', 'carnet', 'Estado']],
-                    column_config={
-                        "full_name": "Nombre Completo",
-                        "email": "Correo",
-                        "role": "Rol",
-                        "id": "ID",
-                    },
-                    use_container_width=True,
+                    df[['id', 'full_name', 'email', 'role', 'carnet', 'Estado']], 
+                    use_container_width=True, 
                     hide_index=True
                 )
                 
-                st.markdown("### ✏️ Acciones Rápidas")
-                col_a1, col_a2 = st.columns(2)
+                st.markdown("---")
+                st.subheader("🔧 Acciones de Usuario")
                 
-                with col_a1:
-                    user_to_edit = st.selectbox("Seleccionar Usuario para Editar Estado", df['id'].tolist(), format_func=lambda x: f"{df[df['id']==x]['full_name'].values[0]} ({x})")
-                    if st.button("🔄 Cambiar Estado (Activo/Inactivo)"):
-                        success, msg = toggle_user_active_api(st.session_state.token, user_to_edit)
-                        if success:
-                            st.success(msg['message'])
-                            st.rerun()
-                        else:
-                            st.error("Error al cambiar estado")
-        else:
-            st.warning("No se encontraron usuarios o error de conexión.")
+                user_options = df['id'].tolist()
+                if user_options:
+                    user_labels = {uid: f"{df[df['id']==uid]['full_name'].values[0]} ({df[df['id']==uid]['role'].values[0]})" for uid in user_options}
+                    selected_uid = st.selectbox("Seleccionar Usuario:", options=user_options, format_func=lambda x: user_labels[x])
+                    current_u_data = df[df['id'] == selected_uid].iloc[0]
+                    
+                    col_edit, col_state, col_pass, col_delete = st.columns(4)
+                    
+                    # 1. EDITAR (Azul - Default)
+                    with col_edit:
+                        with st.popover("✏️ Editar Datos", use_container_width=True):
+                            st.markdown(f"**Editando a:** {current_u_data['full_name']}")
+                            with st.form(f"edit_user_{selected_uid}"):
+                                new_name = st.text_input("Nombre", value=current_u_data.get('first_name', ''))
+                                new_last = st.text_input("Apellido", value=current_u_data.get('last_name', ''))
+                                new_email = st.text_input("Email", value=current_u_data['email'])
+                                new_phone = st.text_input("Teléfono", value=current_u_data.get('phone', ''))
+                                
+                                # Botón AZUL (Secondary por defecto)
+                                if st.form_submit_button("Guardar Cambios", type="secondary"):
+                                    update_data = {"first_name": new_name, "last_name": new_last, "email": new_email, "phone": new_phone}
+                                    with st.spinner("Actualizando..."):
+                                        success, res = update_user_admin_api(st.session_state.token, selected_uid, update_data)
+                                        if success:
+                                            st.session_state.flash_message = ("success", "✅ Usuario actualizado")
+                                            st.rerun()
+                                        else: st.error(f"Error: {res.get('detail')}")
 
-    # --- TAB 2: CURSOS ---
+                    # 2. ESTADO (Rojo/Azul según estado)
+                    with col_state:
+                        is_active = current_u_data['is_active']
+                        btn_label = "Desactivar Cuenta 🔴" if is_active else "Activar Cuenta 🟢"
+                        # ROJO si desactiva, AZUL si activa
+                        btn_type = "primary" if is_active else "secondary"
+                        
+                        if st.button(btn_label, use_container_width=True, type=btn_type):
+                            success, msg = toggle_user_active_api(st.session_state.token, selected_uid)
+                            if success:
+                                st.session_state.flash_message = ("success", f"✅ Estado cambiado: {msg.get('message')}")
+                                st.rerun()
+                            else: st.error(msg.get('detail'))
+
+                    # 3. RESET PASS (Azul)
+                    with col_pass:
+                        with st.popover("🔑 Reset Pass", use_container_width=True):
+                            with st.form(f"reset_pass_{selected_uid}", clear_on_submit=True):
+                                new_p = st.text_input("Nueva contraseña", type="password")
+                                if st.form_submit_button("Cambiar", type="secondary"):
+                                    if len(new_p) < 8: st.error("Mínimo 8 caracteres")
+                                    else:
+                                        success, msg = change_password_api(st.session_state.token, selected_uid, new_p)
+                                        if success: st.success("✅ Contraseña restablecida")
+                                        else: st.error(msg.get('detail'))
+
+                    # 4. ELIMINAR (Rojo - Primary)
+                    with col_delete:
+                        with st.popover("🗑️ Eliminar", use_container_width=True):
+                            st.error(f"¿Eliminar a **{current_u_data['full_name']}**?")
+                            st.warning("Esta acción borrará notas y entregas.")
+                            
+                            if st.button("Sí, Eliminar", type="primary"):
+                                if selected_uid == st.session_state.user['id']:
+                                    st.error("No puedes auto-eliminarte")
+                                else:
+                                    success, res = delete_user_api(st.session_state.token, selected_uid)
+                                    if success:
+                                        st.session_state.flash_message = ("success", "✅ Usuario eliminado")
+                                        st.rerun()
+                                    else: st.error(res.get('detail'))
+        else: st.warning("No se encontraron usuarios.")
+
+    # ==========================================
+    # TAB 2: GESTIÓN DE CURSOS
+    # ==========================================
     with tabs[1]:
         st.subheader("Gestión de Cursos")
         
-        # 1. Crear Nuevo Curso (Lógica antigua de Tab 2)
+        # --- CREAR CURSO (Botón Verde) ---
         with st.expander("➕ Registrar Nuevo Curso"):
             teachers = get_teachers(st.session_state.token)
             teacher_options = {t['id']: f"{t['full_name']} ({t['email']})" for t in teachers}
             
-            with st.form("create_course_form"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    c_title = st.text_input("Nombre del Curso")
-                    c_code = st.text_input("Código (ej. PROG101)")
-                    c_credits = st.number_input("Créditos", min_value=1, max_value=10, value=4)
-                    c_semester = st.number_input("Semestre", min_value=1, max_value=12, value=1)
-                    c_start_date = st.date_input("Fecha de Inicio")
-                with col2:
-                    c_schedule = st.text_input("Horario (ej. Lun/Mie 10:00)")
+            with st.form("create_course_form", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                with c1:
+                    c_title = st.text_input("Nombre")
+                    c_code = st.text_input("Código")
+                    c_credits = st.number_input("Créditos", 1, 10, 4)
+                    c_semester = st.number_input("Semestre", 1, 12, 1)
+                    c_start_date = st.date_input("Inicio")
+                with c2:
+                    c_schedule = st.text_input("Horario")
                     c_classroom = st.text_input("Aula")
-                    c_max_students = st.number_input("Cupo Máximo", min_value=1, value=30)
-                    c_end_date = st.date_input("Fecha de Finalización")
-                    
+                    c_max_students = st.number_input("Cupo", 1, 100, 30)
+                    c_end_date = st.date_input("Fin")
                     if teachers:
-                        c_teacher_id = st.selectbox("Profesor Asignado", options=list(teacher_options.keys()), format_func=lambda x: teacher_options[x])
+                        c_teacher_id = st.selectbox("Profesor", options=list(teacher_options.keys()), format_func=lambda x: teacher_options[x]) 
                     else:
-                        st.warning("No hay profesores registrados.")
+                        st.warning("No hay profesores.")
                         c_teacher_id = None
                 
-                c_description = st.text_area("Descripción")
+                c_desc = st.text_area("Descripción")
+                
+                # APLICAMOS ESTILO VERDE AL BOTÓN DE CREAR
+                set_btn_style("green")
                 if st.form_submit_button("Crear Curso"):
-                     if c_title and c_code and c_teacher_id:
-                        course_data = {
-                            "title": c_title, "code": c_code, "description": c_description,
-                            "credits": c_credits, "semester": c_semester, "schedule": c_schedule,
-                            "classroom": c_classroom, "max_students": c_max_students,
-                            "teacher_id": c_teacher_id, "start_date": c_start_date.isoformat(),
-                            "end_date": c_end_date.isoformat()
-                        }
-                        success, result = create_course_api(st.session_state.token, course_data)
-                        if success: st.success("Curso creado!"); st.rerun()
-                        else: st.error(f"Error: {result}")
-                     else: st.warning("Faltan datos")
+                    if c_title and c_teacher_id:
+                        data = {"title": c_title, "code": c_code, "credits": c_credits, "semester": c_semester, 
+                                "start_date": c_start_date.isoformat(), "end_date": c_end_date.isoformat(),
+                                "schedule": c_schedule, "classroom": c_classroom, "max_students": c_max_students,
+                                "teacher_id": c_teacher_id, "description": c_desc}
+                        success, res = create_course_api(st.session_state.token, data)
+                        if success: 
+                            st.session_state.flash_message = ("success", "✅ Curso creado exitosamente!")
+                            st.rerun()
+                        else: st.error(f"Error: {res}")
+                    else: st.warning("Faltan datos obligatorios")
 
-# 2. Administrar Existentes
+        # --- LISTADO / EDICIÓN ---
         st.markdown("---")
         st.write("### ✏️ Editar / Eliminar Cursos")
-        
         all_courses = get_all_courses(st.session_state.token)
-        # Reutilizamos teachers y teacher_options si ya se cargaron arriba
-        if 'teachers' not in locals():
-            teachers = get_teachers(st.session_state.token)
-            teacher_options = {t['id']: f"{t['full_name']} ({t['email']})" for t in teachers}
         
         if all_courses:
             for course in all_courses:
-                # Expander para cada curso
                 with st.expander(f"📘 {course['code']} - {course['title']}"):
-                    
-                    # --- FORMULARIO DE EDICIÓN ---
-                    # Nota: Aquí NO usamos clear_on_submit=True porque queremos que los datos sigan visibles
                     with st.form(f"edit_course_{course['id']}"):
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
+                        ec1, ec2 = st.columns(2)
+                        with ec1:
                             e_title = st.text_input("Nombre", value=course['title'])
                             e_code = st.text_input("Código", value=course['code'])
                             e_credits = st.number_input("Créditos", value=course['credits'])
                             
-                            # Lógica para el selector de profesor
-                            st.caption(f"Profesor actual: {course.get('teacher_name', 'N/A')}")
-                            current_index = 0
+                            # Lógica para seleccionar el profesor actual
+                            current_idx = 0
                             if teacher_options and course.get('teacher_id') in teacher_options:
-                                current_index = list(teacher_options.keys()).index(course['teacher_id'])
+                                current_idx = list(teacher_options.keys()).index(course['teacher_id'])
                             
-                            e_teacher_id = st.selectbox(
-                                "Cambiar Profesor",
-                                options=list(teacher_options.keys()) if teacher_options else [],
-                                format_func=lambda x: teacher_options[x] if teacher_options else str(x),
-                                index=current_index,
-                                key=f"sel_teach_{course['id']}"
-                            )
-
-                        with col2:
+                            e_teacher_id = st.selectbox("Profesor", options=list(teacher_options.keys()), 
+                                                        index=current_idx, 
+                                                        format_func=lambda x: teacher_options[x],
+                                                        key=f"sel_t_{course['id']}")
+                        with ec2:
                             e_semester = st.number_input("Semestre", value=course['semester'])
                             e_schedule = st.text_input("Horario", value=course.get('schedule', ''))
                             e_classroom = st.text_input("Aula", value=course.get('classroom', ''))
-                            e_max_students = st.number_input("Cupo Máximo", value=course.get('max_students', 30))
-
-                        e_description = st.text_area("Descripción", value=course.get('description', ''))
+                            e_max_students = st.number_input("Cupo", value=course.get('max_students', 30))
                         
-                        # Botón de guardar
-                        if st.form_submit_button("💾 Guardar Cambios", use_container_width=True):
+                        e_desc = st.text_area("Descripción", value=course.get('description', ''))
+                        
+                        # Botón secundario para guardar (Azul/Gris)
+                        if st.form_submit_button("💾 Guardar Cambios", type="secondary", use_container_width=True):
                             update_data = {
-                                "title": e_title,
-                                "code": e_code,
-                                "credits": e_credits,
-                                "semester": e_semester,
-                                "schedule": e_schedule,
-                                "classroom": e_classroom,
-                                "description": e_description,
-                                "teacher_id": e_teacher_id,
-                                "max_students": e_max_students
+                                "title": e_title, "code": e_code, "credits": e_credits,
+                                "semester": e_semester, "schedule": e_schedule, "classroom": e_classroom,
+                                "description": e_desc, "teacher_id": e_teacher_id, "max_students": e_max_students
                             }
-                            
-                            with st.spinner("Actualizando..."):
-                                success, res = update_course_api(st.session_state.token, course['id'], update_data)
-                                if success:
-                                    # Se usa toast porque sobrevive al rerun
-                                    st.toast("✅ Curso actualizado correctamente", icon="💾")
-                                    st.rerun()
-                                else:
-                                    error_msg = res.get('detail', 'Error desconocido') if isinstance(res, dict) else str(res)
-                                    st.error(f"❌ Error al actualizar: {error_msg}")
+                            success, res = update_course_api(st.session_state.token, course['id'], update_data)
+                            if success:
+                                st.session_state.flash_message = ("success", "✅ Curso actualizado")
+                                st.rerun()
+                            else: st.error(f"Error: {res}")
 
-                    # --- BOTÓN DE ELIMINAR ---
-                    st.write("") 
                     col_del, _ = st.columns([1, 3])
                     with col_del:
+                        # Botón ROJO para eliminar
                         if st.button("🗑️ Eliminar Curso", key=f"del_course_{course['id']}", type="primary"):
-                            with st.spinner("Eliminando..."):
-                                success, res = delete_course_api(st.session_state.token, course['id'])
-                                if success:
-                                    st.toast("🗑️ Curso eliminado exitosamente", icon="✅")
-                                    st.rerun()
-                                else:
-                                    error_msg = res.get('detail', 'Error desconocido') if isinstance(res, dict) else str(res)
-                                    st.error(f"Error: {error_msg}")
-        else:
-            st.info("No hay cursos registrados en el sistema.")
+                            success, res = delete_course_api(st.session_state.token, course['id'])
+                            if success:
+                                st.session_state.flash_message = ("success", "🗑️ Curso eliminado")
+                                st.rerun()
+                            else: st.error(res)
 
-    # --- TAB 3: INSCRIPCIONES (Lógica antigua de Tab 3) ---
-    
+    # ==========================================
+    # TAB 3: INSCRIPCIONES (Botón Verde)
+    # ==========================================
     with tabs[2]:
         st.subheader("Inscribir Estudiantes")
-        all_courses = get_all_courses(st.session_state.token)
-        all_students = get_students(st.session_state.token)
+        courses_list = get_all_courses(st.session_state.token)
+        students_list = get_students(st.session_state.token)
         
-        if all_courses and all_students:
-            course_opts = {c['id']: f"{c['code']} - {c['title']}" for c in all_courses}
-            student_opts = {s['id']: f"{s['full_name']} ({s['carnet'] or 'S/C'})" for s in all_students}
+        if courses_list and students_list:
+            c_opts = {c['id']: f"{c['code']} - {c['title']}" for c in courses_list}
+            s_opts = {s['id']: f"{s['full_name']} ({s['carnet'] or 'S/C'})" for s in students_list}
             
-            # INICIO DEL FORMULARIO
-            with st.form("enroll_student_form_admin"):
+            with st.form("enroll_student_form_admin", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    selected_course_id = st.selectbox("Curso", options=list(course_opts.keys()), format_func=lambda x: course_opts[x])
+                    sel_c_id = st.selectbox("Curso", options=list(c_opts.keys()), format_func=lambda x: c_opts[x])
                 with col2:
-                    selected_student_id = st.selectbox("Estudiante", options=list(student_opts.keys()), format_func=lambda x: student_opts[x])
+                    sel_s_id = st.selectbox("Estudiante", options=list(s_opts.keys()), format_func=lambda x: s_opts[x])
                 
-                # BOTÓN DENTRO DEL FORMULARIO
-                submitted = st.form_submit_button("Inscribir Estudiante")
-                
-                # LÓGICA QUE SE EJECUTA AL ENVIAR EL FORMULARIO
-                if submitted:
-                    with st.spinner("Procesando inscripción..."): 
-                        success, res = enroll_student_api(st.session_state.token, selected_course_id, selected_student_id)
-                        
-                        if success: 
-                            st.toast("✅ Estudiante inscrito correctamente!", icon="🎉") 
-                            st.success("Guardado: Estudiante inscrito correctamente") 
-                        else: 
-                            # Manejo seguro del error por si 'res' no es un diccionario
-                            error_msg = res.get('detail', 'Error desconocido') if isinstance(res, dict) else str(res)
-                            st.error(f"❌ Error: {error_msg}")
-            # FIN DEL FORMULARIO
-            
+                # APLICAMOS ESTILO VERDE
+                set_btn_style("green")
+                if st.form_submit_button("Inscribir Estudiante"):
+                    with st.spinner("Procesando..."):
+                        success, res = enroll_student_api(st.session_state.token, sel_c_id, sel_s_id)
+                        if success:
+                            st.session_state.flash_message = ("success", "✅ Estudiante inscrito correctamente!")
+                            st.rerun()
+                        else: st.error(f"❌ Error: {res}")
         else:
-            st.warning("Faltan cursos o estudiantes para realizar inscripciones.")
-            
+            st.warning("Faltan datos de cursos o estudiantes.")
 
-# --- TAB 4: CREAR USUARIO ---
+    # ==========================================
+    # TAB 4: CREAR USUARIO (Botón Verde)
+    # ==========================================
     with tabs[3]:
         st.subheader("Registrar Nuevo Miembro")
         with st.container(border=True):
-            # "clear_on_submit=True" limpia el formulario automáticamente tras enviar sin errores
             with st.form("create_user_form_polished", clear_on_submit=True):
                 c1, c2 = st.columns(2)
                 with c1:
@@ -668,13 +783,13 @@ def show_admin_panel():
                     new_role = st.selectbox("Rol Institucional", ["student", "teacher", "admin"])
                     new_carnet = st.text_input("Carnet (Solo estudiantes)")
                 
-                # Botón de envío
-                submitted = st.form_submit_button("💾 Guardar Usuario en Base de Datos", use_container_width=True)
+                # APLICAMOS ESTILO VERDE
+                set_btn_style("green")
+                submitted = st.form_submit_button("💾 Guardar Usuario en Base de Datos")
                 
                 if submitted:
-                    # Validaciones básicas antes de enviar
                     if not new_username or not new_email or not new_pass:
-                        st.warning("⚠️ Por favor completa los campos obligatorios (Usuario, Email, Contraseña).")
+                        st.warning("⚠️ Completa los campos obligatorios.")
                     elif new_pass != new_pass2:
                         st.error("❌ Las contraseñas no coinciden.")
                     else:
@@ -683,20 +798,13 @@ def show_admin_panel():
                             "password_confirm": new_pass2, "first_name": new_name, "last_name": new_lastname,
                             "role": new_role, "carnet": new_carnet if new_carnet else None
                         }
-                        
-                        # Feedback de carga
-                        with st.spinner("Creando usuario en el sistema..."):
+                        with st.spinner("Creando usuario..."):
                             success, res = create_user(st.session_state.token, data)
-                        
-                        if success:
-                            st.toast(f"✅ Usuario {new_username} creado exitosamente!", icon="🎉")
-                            st.success("Usuario guardado correctamente. Puedes crear otro.")
-                            # NO ponemos st.rerun() aquí, para que se vea el mensaje verde.
-                            # El formulario se limpiará solo gracias a clear_on_submit=True
-                        else:
-                            error_msg = res.get('detail', 'Error desconocido') if isinstance(res, dict) else str(res)
-                            st.error(f"❌ Error: {error_msg}")
-                            
+                            if success:
+                                st.session_state.flash_message = ("success", f"✅ Usuario {new_username} creado!")
+                                st.rerun()
+                            else: st.error(f"❌ Error: {res}")
+
 # ==================== INTERFAZ DE CHAT ====================
 
 def show_active_chat(selected_user_id, user_map, my_id):
@@ -705,7 +813,6 @@ def show_active_chat(selected_user_id, user_map, my_id):
     """
     target_user = user_map[selected_user_id]
     
-    # --- CABECERA CON BOTÓN DE RECARGA ---
     col_title, col_btn = st.columns([4, 1])
     
     with col_title:
@@ -746,7 +853,7 @@ def show_active_chat(selected_user_id, user_map, my_id):
         else:
             st.error("Error al enviar mensaje")
 
-# ==================== VISTA PRINCIPAL DE COMUNIDAD ====================
+# ==================== VISTA PRINCIPAL DE COMUNIDAD (Mensajes) ====================
 
 def show_chat_interface():
     st.title("💬 Comunidad Universitaria")
@@ -772,6 +879,9 @@ def show_chat_interface():
     
     with col_users:
         st.subheader("Contactos")
+        
+        if st.button("🔄 Actualizar Lista", type="secondary", use_container_width=True):
+            st.rerun()
         
         contact_options = []
         # Prioridad 1: Online
@@ -803,7 +913,6 @@ def show_chat_interface():
     
     with col_chat:
         if selected_user_id:
-            # SE LLAMA AL FRAGMENTO AQUÍ
             show_active_chat(selected_user_id, user_map, my_id)
         else:
             st.info("👈 Selecciona un usuario de la lista para ver el chat.")
@@ -811,8 +920,7 @@ def show_chat_interface():
 # ==================== LOGIN ====================
 
 def show_login():
-    # Botón para volver al inicio
-    if st.button("⬅️ Volver al Inicio"):
+    if st.button("⬅️ Volver al Inicio", type="secondary"):
         st.session_state.page = "landing"
         st.rerun()
 
@@ -823,6 +931,9 @@ def show_login():
         with st.form("login_form"):
             username = st.text_input("Usuario o Email")
             password = st.text_input("Contraseña", type="password")
+            
+            # BOTÓN ESPECIAL ANIMADO
+            set_btn_style("special")
             submit = st.form_submit_button("Ingresar", use_container_width=True)
             
             if submit:
@@ -833,22 +944,24 @@ def show_login():
                         st.session_state.user = get_current_user(res["access_token"])
                         st.session_state.page = "app"
                         st.rerun()
-                    else:
-                        st.error("Credenciales inválidas")
-                else:
-                    st.warning("Llena todos los campos")
+                    else: st.error("Credenciales inválidas")
+                else: st.warning("Llena todos los campos")
 
 # ==================== MAIN APP ====================
 
 def show_main_app_router():
-    # Esta función decide qué mostrar basado en el usuario
-    # Mostrar mensajes flash si existen
+    # --- GESTIÓN DE NOTIFICACIONES TOAST (Esquina superior derecha) ---
     if st.session_state.flash_message:
         msg_type, msg_text = st.session_state.flash_message
-        if msg_type == "success": st.success(msg_text)
-        elif msg_type == "error": st.error(msg_text)
-        elif msg_type == "warning": st.warning(msg_text)
-        elif msg_type == "info": st.info(msg_text)
+        if msg_type == "success": 
+            st.toast(msg_text, icon="✅")
+        elif msg_type == "error": 
+            st.toast(msg_text, icon="❌")
+        elif msg_type == "warning": 
+            st.toast(msg_text, icon="⚠️")
+        elif msg_type == "info": 
+            st.toast(msg_text, icon="ℹ️")
+        # Limpiamos el mensaje inmediatamente
         st.session_state.flash_message = None
 
     user = st.session_state.user
@@ -862,7 +975,7 @@ def show_main_app_router():
         st.image("https://img.icons8.com/fluency/96/noodles.png", width=80)
         st.write(f"Hola, **{user.get('first_name')}**")
         
-        # Menú dinámico según rol
+        # --- DEFINICIÓN DE MENÚS ---
         if user['role'] == 'admin':
             menu_options = ["Dashboard", "Admin", "Comunidad", "Perfil"]
             menu_icons = ["house", "gear", "chat-dots", "person"]
@@ -870,36 +983,55 @@ def show_main_app_router():
             menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Entregas", "Calificaciones", "Comunidad", "Perfil"]
             menu_icons = ["house", "book", "clipboard-check", "upload", "graph-up", "chat-dots", "person"]
 
-        menu = option_menu("Menú", 
+        # --- LÓGICA PARA MANTENER LA POSICIÓN EN EL MENÚ ---
+        # 1. Recuperar la última selección guardada, o usar la primera por defecto
+        default_index = 0
+        if "current_menu_selection" in st.session_state:
+            try:
+                # Buscamos el índice del menú guardado en la lista actual de opciones
+                default_index = menu_options.index(st.session_state.current_menu_selection)
+            except ValueError:
+                default_index = 0 # Si el menú cambió o no existe, volver al inicio
+
+        # 2. Renderizar el menú con el default_index calculado
+        selected_menu = option_menu(
+            "Menú", 
             menu_options, 
             icons=menu_icons, 
             menu_icon="cast", 
-            default_index=0,
+            default_index=default_index,
             key="main_nav_menu"
-            )
+        )
 
-        if st.button("Cerrar Sesión"):
+        # 3. Guardar la selección actual para la próxima recarga
+        st.session_state.current_menu_selection = selected_menu
+
+        # Botón de Salir (Rojo/Primary)
+        if st.button("Cerrar Sesión", type="primary"):
             st.session_state.token = None
             st.session_state.user = None
             st.session_state.page = "landing"
+            # Limpiar selección de menú al salir
+            if "current_menu_selection" in st.session_state:
+                del st.session_state.current_menu_selection
             st.rerun()
 
-    # Enrutamiento de vistas internas
-    if menu == "Admin" and user['role'] == 'admin':
+    # Enrutamiento de vistas internas usando la variable selected_menu
+    if selected_menu == "Admin" and user['role'] == 'admin': 
         show_admin_panel()
-    elif menu == "Dashboard":
+    elif selected_menu == "Dashboard": 
         show_dashboard()
-    elif menu == "Mis Cursos":
+    elif selected_menu == "Mis Cursos": 
         show_courses()
-    elif menu == "Tareas":
+    elif selected_menu == "Tareas": 
         show_assignments()
-    elif menu == "Entregas":
+    elif selected_menu == "Entregas": 
         show_submissions()
-    elif menu == "Calificaciones":
+    elif selected_menu == "Calificaciones": 
         show_grades()
-    elif menu == "Perfil":
+    elif selected_menu == "Perfil": 
         show_profile()
-    elif menu == "Comunidad":
+    elif selected_menu == "Comunidad": 
         show_chat_interface()
     else:
         st.write("Bienvenido a Maruchan University")
@@ -1301,9 +1433,11 @@ def show_profile():
 
     col1, col2 = st.columns([1, 2])
     
+    # --- SECCIÓN DE FOTO Y DATOS ---
     with col1:
         if user.get('profile_pic_url'):
             base_url = API_URL.rstrip("/")
+            # Ajuste para entorno local si viene 'backend' en la URL
             if "backend" in base_url:
                  base_url = base_url.replace("backend", "localhost")
             
@@ -1322,6 +1456,7 @@ def show_profile():
     st.markdown("---")
     st.subheader("✏️ Editar Información")
     
+    # --- FORMULARIO DE EDICIÓN ---
     with st.form("edit_profile_form"):
         col_a, col_b = st.columns(2)
         
@@ -1338,7 +1473,7 @@ def show_profile():
         st.markdown("### Cambiar Foto")
         new_profile_pic = st.file_uploader("Subir nueva foto", type=['png', 'jpg', 'jpeg'])
         
-        submit_update = st.form_submit_button("Guardar Cambios")
+        submit_update = st.form_submit_button("Guardar Cambios", type="secondary")
         
         if submit_update:
             update_data = {
@@ -1365,10 +1500,37 @@ def show_profile():
                     else:
                         st.session_state.user = result
                         
+                    #Usa flash message para que sobreviva al rerun
                     st.session_state.flash_message = ("success", "✅ Perfil actualizado exitosamente!")
                     st.rerun()
                 else:
                     st.error(f"❌ Error: {result.get('detail', 'Error desconocido')}")
+                    
+    st.markdown("---")
+    st.subheader("🔐 Seguridad")
+    
+    # --- FORMULARIO DE CONTRASEÑA ---
+    with st.expander("Cambiar mi contraseña"):
+        with st.form("change_my_pass_form", clear_on_submit=True):
+            p1 = st.text_input("Nueva Contraseña", type="password")
+            p2 = st.text_input("Confirmar Nueva Contraseña", type="password")
+            
+            # --- CORRECCIÓN AQUÍ ---
+            set_btn_style("special") 
+            if st.form_submit_button("Actualizar Contraseña"): 
+                if p1 != p2:
+                    st.error("Las contraseñas no coinciden")
+                elif len(p1) < 8:
+                    st.warning("La contraseña debe tener al menos 8 caracteres")
+                else:
+                    with st.spinner("Actualizando..."):
+                        success, msg = change_password_api(st.session_state.token, user['id'], p1)
+                        if success:
+                            # Flash message y rerun para limpiar form
+                            st.session_state.flash_message = ("success", "✅ Contraseña actualizada correctamente")
+                            st.rerun()
+                        else:
+                            st.error(f"Error: {msg.get('detail')}")
 
 # ==================== MAIN ====================
 

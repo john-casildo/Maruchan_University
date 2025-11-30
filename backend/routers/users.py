@@ -6,10 +6,10 @@ import os
 import uuid
 
 from database import get_db
-from models import User, UserRole
+from models import User, UserRole, Message
 from schemas import (
     UserCreate, UserUpdate, UserResponse, UserList,
-    MessageResponse
+    MessageResponse,UserPasswordUpdate
 )
 from dependencies import (
     get_current_user,
@@ -304,8 +304,6 @@ async def delete_user(
 ):
     """
     Elimina un usuario (solo administradores).
-    
-    ADVERTENCIA: Esta operación es permanente.
     """
     user = db.query(User).filter(User.id == user_id).first()
     
@@ -322,6 +320,20 @@ async def delete_user(
             detail="No puedes eliminar tu propia cuenta"
         )
     
+    # --- LIMPIEZA DE DATOS RELACIONADOS ---
+    
+    # 1. Eliminar mensajes de chat (Donde es remitente o receptor)
+    db.query(Message).filter(Message.sender_id == user.id).delete()
+    db.query(Message).filter(Message.receiver_id == user.id).delete()
+    
+    # 2. Eliminar inscripciones si es estudiante
+    # SQLAlchemy suele manejar esto, pero es más seguro hacerlo explícito
+    if user.role == UserRole.STUDENT:
+        from models import Enrollment, Submission
+        db.query(Submission).filter(Submission.student_id == user.id).delete()
+        db.query(Enrollment).filter(Enrollment.student_id == user.id).delete()
+
+    # 3. Eliminar usuario
     db.delete(user)
     db.commit()
     
@@ -329,8 +341,6 @@ async def delete_user(
         message="Usuario eliminado exitosamente",
         success=True
     )
-
-
 # ==================== STATS ENDPOINTS ====================
 
 @router.get("/stats/summary")
@@ -412,3 +422,35 @@ async def upload_profile_picture(
     db.refresh(user)
     
     return user
+
+@router.patch("/{user_id}/password", response_model=MessageResponse)
+async def change_user_password(
+    user_id: int,
+    password_data: UserPasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cambia la contraseña de un usuario.
+    - Admins: Pueden cambiar la de cualquiera (Reset).
+    - Usuarios: Solo pueden cambiar la suya propia.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+
+    # Verificación de permisos
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para cambiar esta contraseña"
+        )
+
+    # Actualizar contraseña
+    user.hashed_password = get_password_hash(password_data.password)
+    db.commit()
+
+    return MessageResponse(message="Contraseña actualizada exitosamente")
