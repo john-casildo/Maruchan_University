@@ -1,0 +1,95 @@
+
+# 🎓 Guía de Instalación y Actualización: Maruchan University
+
+Esta guía te ayudará a poner en marcha la nueva versión de la plataforma con el **Chat de Comunidad** y el **Acceso Remoto (Online)**.
+
+-----
+
+## 🛑 PASO OBLIGATORIO PARA TODOS: Configurar Ngrok (Acceso Online)
+
+Para que la plataforma sea accesible desde internet (no solo local), usamos **Ngrok**. Este paso es manual y necesario tanto si instalas de cero como si actualizas.
+
+1.  Ve a [dashboard.ngrok.com](https://dashboard.ngrok.com/signup) y crea una cuenta gratuita.
+2.  En tu panel, ve a **"Your Authtoken"** y copia el código largo que empieza con `2...`.
+3.  Abre el archivo `docker-compose.yml` que viene en el código.
+4.  Busca la sección `ngrok` al final y pega tu token donde dice `TU_TOKEN_AQUI`:
+
+<!-- end list -->
+
+```yaml
+  ngrok:
+    # ... otras configuraciones ...
+    environment:
+      NGROK_AUTHTOKEN: "PEGA_TU_AUTHTOKEN_AQUI_SIN_BORRAR_LAS_COMILLAS"
+```
+
+-----
+
+## 🏗️ Escenario 1: Instalación Limpia (Computadora Nueva)
+
+Si vas a instalar el proyecto por primera vez en una computadora vacía.
+
+1.  **Descomprimir:** Extrae el archivo ZIP del proyecto en una carpeta.
+2.  **Configurar Ngrok:** Realiza el paso obligatorio mencionado arriba en `docker-compose.yml`.
+3.  **Iniciar:** Abre una terminal en la carpeta del proyecto y ejecuta:
+    ```bash
+    docker-compose up -d --build
+    ```
+4.  **Base de Datos:** Una vez que finalice, ejecuta estos comandos para crear las tablas y el usuario admin:
+    ```bash
+    docker-compose exec backend alembic revision --autogenerate -m "Inicial"
+    docker-compose exec backend alembic upgrade head
+    docker-compose exec backend python crear_admin.py
+    ```
+5.  **Entrar:**
+      * **Local:** [http://localhost:8501](https://www.google.com/search?q=http://localhost:8501)
+      * **Online:** Ve a [http://localhost:4040](https://www.google.com/search?q=http://localhost:4040) y copia el enlace que termina en `.ngrok-free.app`.
+
+-----
+
+## 🔄 Escenario 2: Actualizar una versión anterior
+
+Si ya tienes el proyecto corriendo en tu PC y necesitas aplicar las nuevas funciones (Chat, Mejoras Admin) usando el nuevo código.
+
+### 1\. Reemplazar Archivos
+
+1.  **Haz un respaldo** de tu archivo `.env` actual (si tienes configuraciones personalizadas).
+2.  **Borra** las carpetas `backend` y `frontend` de tu instalación actual.
+3.  **Copia y Pega** las carpetas `backend` y `frontend` del **NUEVO ZIP** en tu carpeta del proyecto.
+4.  **Reemplaza** el archivo `docker-compose.yml` con el nuevo del ZIP.
+
+### 2\. Configurar Ngrok (Importante)
+
+Como reemplazaste el `docker-compose.yml`, **debes volver a poner tu Token de Ngrok** (ver "Paso Obligatorio" al inicio de esta guía).
+
+### 3\. Actualizar Contenedores
+
+Abre tu terminal en la carpeta y ejecuta esto para instalar las nuevas librerías (Streamlit nuevo, Autorefresh, etc.):
+
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+### 4\. Actualizar Base de Datos (Crucial para el Chat)
+
+Tu base de datos anterior no tiene la tabla de "Mensajes". Debemos crearla sin borrar tus datos actuales:
+
+```bash
+# 1. Generar la migración para detectar la nueva tabla de chat
+docker-compose exec backend alembic revision --autogenerate -m "Agregar chat"
+
+# 2. Aplicar los cambios
+docker-compose exec backend alembic upgrade head
+
+# 3. Reiniciar para asegurar que todo cargue bien
+docker-compose restart backend
+```
+
+### ✅ ¡Listo\!
+
+Ya puedes entrar a la plataforma.
+
+  * En el menú lateral verás la nueva opción **"💬 Comunidad"**.
+  * Podrás chatear en tiempo real con otros usuarios.
+  * El panel de administración tendrá las nuevas pestañas y mejoras.

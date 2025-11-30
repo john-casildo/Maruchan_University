@@ -1,0 +1,128 @@
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: maruchan_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-maruchan_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maruchan_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-maruchan_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - maruchan_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maruchan_user} -d ${POSTGRES_DB:-maruchan_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maruchan_backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      # URL de conexión corregida
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-maruchan_user}:${POSTGRES_PASSWORD:-maruchan_pass}@db:5432/${POSTGRES_DB:-maruchan_db}
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - STORAGE_DIR=/app/maruchan_storage
+      - UPLOAD_DIR=/app/maruchan_storage/submissions
+      - MATERIALS_DIR=/app/maruchan_storage/materials
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-True}
+    volumes:
+      - ./backend:/app
+      - maruchan_files:/app/maruchan_storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - maruchan_network
+    command: >
+      sh -c "
+        echo '⏳ Esperando a que la base de datos esté lista...' &&
+        sleep 5 &&
+        echo '🚀 Iniciando FastAPI...' &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Frontend Streamlit
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: maruchan_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8501}:8501"
+    environment:
+      - API_URL=http://backend:8000
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    networks:
+      - maruchan_network
+
+# Servicio de Túnel (ngrok) para acceso remoto
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: maruchan_tunnel
+    restart: unless-stopped
+    command: http frontend:8501
+    environment:
+      # Regístrate gratis en ngrok.com para obtener tu token (cambiarlo según quien lo corra)
+      NGROK_AUTHTOKEN: "36A91urqies1nfqYQdoJxrbFucn_524NWHdxFpCWPW46j5xa4"
+    ports:
+      - 4040:4040
+    depends_on:
+      - frontend
+    networks:
+      - maruchan_network
+
+  # PgAdmin (Opcional - para administrar la BD visualmente)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: maruchan_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@maruchan.edu}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      - db
+    networks:
+      - maruchan_network
+    profiles:
+      - tools  # Ejecutar con: docker-compose --profile tools up
+
+networks:
+  maruchan_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  maruchan_files:
+    driver: local
+  pgadmin_data:
+    driver: local
+
