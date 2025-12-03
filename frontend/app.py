@@ -17,6 +17,14 @@ st.set_page_config(
 # URL de la API
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+try:
+    from student_app import run_student_app
+    STUDENT_APP_AVAILABLE = True
+except ImportError:
+    STUDENT_APP_AVAILABLE = False
+    st.warning("⚠️ No se encontró student_app.py. La interfaz de estudiantes no está disponible.")
+
+
 # --- ESTILOS CSS MEJORADOS Y COMBINADOS ---
 
 st.markdown("""
@@ -950,7 +958,26 @@ def show_login():
 # ==================== MAIN APP ====================
 
 def show_main_app_router():
-    # --- GESTIÓN DE NOTIFICACIONES TOAST (Esquina superior derecha) ---
+    """
+    Router SOLO para Admin y Profesores
+    Los estudiantes NUNCA deben llegar aquí
+    """
+    
+    # Validación de usuario
+    user = st.session_state.user
+    if not user:
+        st.session_state.page = "login"
+        st.rerun()
+        return
+    
+    # Bloquear estudiantes
+    if user.get('role') == 'student':
+        st.error("⚠️ Esta interfaz es solo para administradores y profesores")
+        st.info("Redirigiendo a tu panel estudiantil...")
+        st.rerun()
+        return
+    
+    # Gestión de notificaciones TOAST
     if st.session_state.flash_message:
         msg_type, msg_text = st.session_state.flash_message
         if msg_type == "success": 
@@ -961,39 +988,33 @@ def show_main_app_router():
             st.toast(msg_text, icon="⚠️")
         elif msg_type == "info": 
             st.toast(msg_text, icon="ℹ️")
-        # Limpiamos el mensaje inmediatamente
         st.session_state.flash_message = None
 
-    user = st.session_state.user
-    if not user:
-        st.session_state.page = "login"
-        st.rerun()
-        return
-    
     # Sidebar común
     with st.sidebar:
         st.image("https://img.icons8.com/fluency/96/noodles.png", width=80)
         st.write(f"Hola, **{user.get('first_name')}**")
         
-        # --- DEFINICIÓN DE MENÚS ---
+        # Definición de menús
         if user['role'] == 'admin':
             menu_options = ["Dashboard", "Admin", "Comunidad", "Perfil"]
             menu_icons = ["house", "gear", "chat-dots", "person"]
+        elif user['role'] == 'teacher':
+            menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Comunidad", "Perfil"]
+            menu_icons = ["house", "book", "clipboard-check", "chat-dots", "person"]
         else:
-            menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Entregas", "Calificaciones", "Comunidad", "Perfil"]
-            menu_icons = ["house", "book", "clipboard-check", "upload", "graph-up", "chat-dots", "person"]
+            st.error("Rol no autorizado")
+            return
 
-        # --- LÓGICA PARA MANTENER LA POSICIÓN EN EL MENÚ ---
-        # 1. Recuperar la última selección guardada, o usar la primera por defecto
+        # Lógica para mantener la posición en el menú
         default_index = 0
         if "current_menu_selection" in st.session_state:
             try:
-                # Buscamos el índice del menú guardado en la lista actual de opciones
                 default_index = menu_options.index(st.session_state.current_menu_selection)
             except ValueError:
-                default_index = 0 # Si el menú cambió o no existe, volver al inicio
+                default_index = 0
 
-        # 2. Renderizar el menú con el default_index calculado
+        # Renderizar el menú
         selected_menu = option_menu(
             "Menú", 
             menu_options, 
@@ -1003,20 +1024,19 @@ def show_main_app_router():
             key="main_nav_menu"
         )
 
-        # 3. Guardar la selección actual para la próxima recarga
+        # Guardar la selección actual
         st.session_state.current_menu_selection = selected_menu
 
-        # Botón de Salir (Rojo/Primary)
+        # Botón de Salir
         if st.button("Cerrar Sesión", type="primary"):
             st.session_state.token = None
             st.session_state.user = None
             st.session_state.page = "landing"
-            # Limpiar selección de menú al salir
             if "current_menu_selection" in st.session_state:
                 del st.session_state.current_menu_selection
             st.rerun()
 
-    # Enrutamiento de vistas internas usando la variable selected_menu
+    # Enrutamiento de vistas internas
     if selected_menu == "Admin" and user['role'] == 'admin': 
         show_admin_panel()
     elif selected_menu == "Dashboard": 
@@ -1035,7 +1055,6 @@ def show_main_app_router():
         show_chat_interface()
     else:
         st.write("Bienvenido a Maruchan University")
-
 # ==================== VISTAS EXISTENTES ====================
 
 def show_dashboard():
@@ -1535,16 +1554,51 @@ def show_profile():
 # ==================== MAIN ====================
 
 def main():
+    """
+    Función principal que enruta a la interfaz correcta según el rol del usuario
+    """
+    
     if st.session_state.page == "landing":
         show_landing_page()
-    elif st.session_state.page == "login":
+        return
+    
+    if st.session_state.page == "login":
         show_login()
-    elif st.session_state.page == "app" and st.session_state.token:
-        show_main_app_router()
-    else:
-        # Default fallback
-        st.session_state.page = "landing"
-        st.rerun()
+        return
+    
+    if st.session_state.page == "app" and st.session_state.token and st.session_state.user:
+        user_role = st.session_state.user.get('role')
+        
+        # ESTUDIANTES → student_app.py
+        if user_role == 'student':
+            if STUDENT_APP_AVAILABLE:
+                run_student_app()
+            else:
+                st.error("⚠️ La interfaz de estudiantes no está disponible.")
+                st.info("Asegúrate de que el archivo student_app.py esté en el mismo directorio que app.py")
+                if st.button("Cerrar sesión"):
+                    st.session_state.token = None
+                    st.session_state.user = None
+                    st.session_state.page = "landing"
+                    st.rerun()
+            return
+        
+        # ADMIN Y PROFESORES → app.py original
+        elif user_role in ['admin', 'teacher']:
+            show_main_app_router()
+            return
+        
+        else:
+            st.error("Rol de usuario no reconocido")
+            if st.button("Volver al inicio"):
+                st.session_state.page = "landing"
+                st.rerun()
+            return
+    
+    # Fallback
+    st.session_state.page = "landing"
+    st.rerun()
+
 
 if __name__ == "__main__":
     main()
