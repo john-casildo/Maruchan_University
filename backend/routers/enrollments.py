@@ -261,18 +261,26 @@ async def create_enrollment(
             detail="El curso no está activo"
         )
     
-    # Verificar si ya está inscrito
+    # Verificar si ya existe una inscripción (activa o dropped)
     existing = db.query(Enrollment).filter(
         Enrollment.student_id == enrollment_data.student_id,
-        Enrollment.course_id == enrollment_data.course_id,
-        Enrollment.status == EnrollmentStatus.ENROLLED
+        Enrollment.course_id == enrollment_data.course_id
     ).first()
     
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El estudiante ya está inscrito en este curso"
-        )
+        # Si ya está inscrito activamente, error
+        if existing.status == EnrollmentStatus.ENROLLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El estudiante ya está inscrito en este curso"
+            )
+        # Si estaba dropped, reactivar la inscripción
+        elif existing.status == EnrollmentStatus.DROPPED:
+            existing.status = EnrollmentStatus.ENROLLED
+            existing.status_update_date = datetime.utcnow()
+            db.commit()
+            db.refresh(existing)
+            return await get_enrollment_by_id(existing.id, db, current_user)
     
     # Verificar cupo disponible
     if course.is_full:
@@ -281,7 +289,7 @@ async def create_enrollment(
             detail="El curso ha alcanzado su capacidad máxima"
         )
     
-    # Crear inscripción
+    # Crear inscripción nueva
     new_enrollment = Enrollment(**enrollment_data.model_dump())
     
     db.add(new_enrollment)
@@ -319,6 +327,7 @@ async def drop_enrollment(
     
     Permisos:
     - Estudiantes: pueden retirarse ellos mismos
+    - Profesores: pueden retirar estudiantes de sus cursos
     - Admins: pueden retirar a cualquier estudiante
     """
     enrollment = db.query(Enrollment).filter(Enrollment.id == enrollment_id).first()
@@ -337,10 +346,13 @@ async def drop_enrollment(
                 detail="Solo puedes retirarte de tus propios cursos"
             )
     elif current_user.role == UserRole.TEACHER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Los profesores no pueden retirar estudiantes"
-        )
+        # Los profesores pueden retirar estudiantes de sus propios cursos
+        if enrollment.course.teacher_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes retirar estudiantes de tus propios cursos"
+            )
+    # Admins pueden retirar a cualquiera
     
     if enrollment.status == EnrollmentStatus.DROPPED:
         raise HTTPException(

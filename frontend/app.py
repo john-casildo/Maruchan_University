@@ -607,6 +607,15 @@ def get_course_enrollments(token, course_id):
         return []
     except Exception as e: return []
 
+def drop_student_api(token, enrollment_id):
+    """Desincribe a un estudiante de un curso"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.patch(f"{API_URL}/api/enrollments/{enrollment_id}/drop", headers=headers)
+        if response.status_code == 200: return True, response.json()
+        return False, response.json()
+    except Exception as e: return False, {"detail": str(e)}
+
 
 # ==================== GESTIÓN DE ESTADO ====================
 
@@ -1671,23 +1680,49 @@ def show_courses():
                         if enrollments:
                             for enrollment in enrollments:
                                 student = enrollment['student']
-                                st.markdown(f"""
-                                    <div style="background: white; padding: 12px 16px; border-radius: 8px; 
-                                                margin: 8px 0; border-left: 3px solid #06d6a0;
-                                                box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <div>
-                                                <strong>👤 {student['full_name']}</strong>
-                                                <br><span style="color: #888; font-size: 0.85rem;">
-                                                    📧 {student['email']} | 🎫 {student.get('carnet', 'S/C')}
+                                col_info, col_action = st.columns([4, 1])
+                                
+                                with col_info:
+                                    st.markdown(f"""
+                                        <div style="background: white; padding: 12px 16px; border-radius: 8px; 
+                                                    margin: 4px 0; border-left: 3px solid #06d6a0;
+                                                    box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>👤 {student['full_name']}</strong>
+                                                    <br><span style="color: #888; font-size: 0.85rem;">
+                                                        📧 {student['email']} | 🎫 {student.get('carnet', 'S/C')}
+                                                    </span>
+                                                </div>
+                                                <span style="color: #888; font-size: 0.8rem;">
+                                                    📅 {enrollment['enrolled_at'][:10]}
                                                 </span>
                                             </div>
-                                            <span style="color: #888; font-size: 0.8rem;">
-                                                📅 {enrollment['enrolled_at'][:10]}
-                                            </span>
                                         </div>
-                                    </div>
-                                """, unsafe_allow_html=True)
+                                    """, unsafe_allow_html=True)
+                                
+                                with col_action:
+                                    if st.button("🗑️", key=f"drop_{enrollment['id']}_{course['id']}", 
+                                                help=f"Desinscribir a {student['full_name']}", type="primary"):
+                                        st.session_state[f"confirm_drop_{enrollment['id']}"] = True
+                                
+                                # Confirmación de desinscripción
+                                if st.session_state.get(f"confirm_drop_{enrollment['id']}", False):
+                                    st.warning(f"⚠️ ¿Desinscribir a **{student['full_name']}** del curso?")
+                                    col_yes, col_no = st.columns(2)
+                                    with col_yes:
+                                        if st.button("✅ Sí", key=f"yes_drop_{enrollment['id']}", type="primary"):
+                                            success, res = drop_student_api(st.session_state.token, enrollment['id'])
+                                            if success:
+                                                del st.session_state[f"confirm_drop_{enrollment['id']}"]
+                                                st.session_state.flash_message = ("success", f"🗑️ {student['full_name']} desinscrito del curso")
+                                                st.rerun()
+                                            else:
+                                                st.error(f"Error: {res.get('detail')}")
+                                    with col_no:
+                                        if st.button("❌ No", key=f"no_drop_{enrollment['id']}", type="secondary"):
+                                            del st.session_state[f"confirm_drop_{enrollment['id']}"]
+                                            st.rerun()
                         else:
                             st.info("📭 No hay estudiantes inscritos en este curso.")
                     

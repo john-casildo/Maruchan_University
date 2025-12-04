@@ -61,6 +61,8 @@ async def get_courses(
     # Mapear a CourseList
     result = []
     for course in courses:
+        # Contar solo inscripciones activas (no dropped)
+        active_enrollments = [e for e in course.enrollments if e.status == "enrolled"]
         result.append({
             "id": course.id,
             "code": course.code,
@@ -69,7 +71,7 @@ async def get_courses(
             "teacher_id": course.teacher_id,
             "semester": course.semester,
             "credits": course.credits,
-            "enrolled_count": len(course.enrollments),
+            "enrolled_count": len(active_enrollments),
             "status": course.status
         })
         
@@ -89,8 +91,8 @@ async def get_my_courses(
     if current_user.role == UserRole.TEACHER:
         courses = db.query(Course).filter(Course.teacher_id == current_user.id).all()
     elif current_user.role == UserRole.STUDENT:
-        # Obtener cursos a través de inscripciones
-        courses = [enrollment.course for enrollment in current_user.enrollments]
+        # Obtener cursos a través de inscripciones ACTIVAS (no dropped)
+        courses = [enrollment.course for enrollment in current_user.enrollments if enrollment.status == "enrolled"]
     else:
         # Admin ve todos (o podría no ver ninguno en "mis cursos")
         courses = db.query(Course).all()
@@ -98,6 +100,8 @@ async def get_my_courses(
     # Mapear a CourseList
     result = []
     for course in courses:
+        # Contar solo inscripciones activas (no dropped)
+        active_enrollments = [e for e in course.enrollments if e.status == "enrolled"]
         result.append({
             "id": course.id,
             "code": course.code,
@@ -106,7 +110,7 @@ async def get_my_courses(
             "teacher_id": course.teacher_id,
             "semester": course.semester,
             "credits": course.credits,
-            "enrolled_count": len(course.enrollments),
+            "enrolled_count": len(active_enrollments),
             "status": course.status
         })
         
@@ -130,7 +134,9 @@ async def get_course_by_id(
         
     # Preparar respuesta
     response = CourseResponse.from_orm(course)
-    response.enrolled_count = len(course.enrollments)
+    # Contar solo inscripciones activas
+    active_enrollments = [e for e in course.enrollments if e.status == "enrolled"]
+    response.enrolled_count = len(active_enrollments)
     response.is_full = course.is_full
     
     return response
@@ -207,7 +213,9 @@ async def update_course(
     db.refresh(course)
     
     response = CourseResponse.from_orm(course)
-    response.enrolled_count = len(course.enrollments)
+    # Contar solo inscripciones activas
+    active_enrollments = [e for e in course.enrollments if e.status == "enrolled"]
+    response.enrolled_count = len(active_enrollments)
     
     return response
 
