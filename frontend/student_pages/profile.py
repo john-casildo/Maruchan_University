@@ -543,21 +543,21 @@ def render_edit_form(user):
         
         with col_a:
             new_first_name = st.text_input(
-                "Nombre *", 
+                "Primer Nombre *", 
                 value=user.get('first_name', ''),
-                placeholder="Ingresa tu nombre",
+                placeholder="Ej: Juan",
                 help="Campo obligatorio"
             )
             new_last_name = st.text_input(
-                "Apellido *", 
+                "Apellido(s) *", 
                 value=user.get('last_name', ''),
-                placeholder="Ingresa tu apellido",
+                placeholder="Ej: Pérez López",
                 help="Campo obligatorio"
             )
             new_email = st.text_input(
                 "Email *", 
                 value=user.get('email', ''),
-                placeholder="tu@email.com",
+                placeholder="usuario@maruchan.edu",
                 help="Tu correo institucional"
             )
         
@@ -574,6 +574,16 @@ def render_edit_form(user):
                 placeholder="Opcional",
                 help="Campo opcional"
             )
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 👤 Nombre de Usuario")
+        
+        new_username = st.text_input(
+            "Nombre de Usuario",
+            value=user.get('username', ''),
+            placeholder="nuevo_usuario",
+            help="Mínimo 3 caracteres. Este es tu identificador único para iniciar sesión."
+        )
         
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📷 Foto de Perfil")
@@ -627,7 +637,8 @@ def render_edit_form(user):
                 "last_name": new_last_name.strip(),
                 "email": new_email.strip(),
                 "phone": new_phone.strip() if new_phone else None,
-                "middle_name": new_middle_name.strip() if new_middle_name else None
+                "middle_name": new_middle_name.strip() if new_middle_name else None,
+                "username": new_username.strip() if new_username and new_username.strip() != user.get('username') else None
             }
             
             # Animación de carga
@@ -709,14 +720,14 @@ def render_password_section(user):
                 p1 = st.text_input(
                     "🔑 Nueva Contraseña",
                     type="password",
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder="Ingresa una contraseña segura"
                 )
             
             with col_p2:
                 p2 = st.text_input(
                     "🔑 Confirmar Contraseña",
                     type="password",
-                    placeholder="Repite la contraseña"
+                    placeholder="Confirma tu nueva contraseña"
                 )
             
             # Medidor de fortaleza

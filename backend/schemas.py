@@ -104,6 +104,7 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=150)
     email: Optional[EmailStr] = None
     first_name: Optional[str] = Field(None, max_length=100)
     middle_name: Optional[str] = Field(None, max_length=100)
@@ -133,7 +134,7 @@ class UserList(BaseModel):
     email: EmailStr
     role: UserRoleEnum
     carnet: Optional[str]
-    is_active: bool
+    is_active: Optional[bool] = True
     
     class Config:
         from_attributes = True
@@ -291,9 +292,12 @@ class AssignmentResponse(AssignmentBase):
 class AssignmentList(BaseModel):
     id: int
     title: str
+    description: Optional[str] = None
+    course_id: int
     course_code: str
     due_date: datetime
     max_score: float
+    weight: float = 1.0
     is_overdue: bool
     is_published: bool
     

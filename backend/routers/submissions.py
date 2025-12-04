@@ -142,16 +142,18 @@ async def get_submissions(
             full_name=submission.student.full_name,
             email=submission.student.email,
             role=submission.student.role,
-            carnet=submission.student,
+            carnet=submission.student.carnet,
             is_active=submission.student.is_active
         )
         
         assignment_data = AssignmentList(
             id=submission.assignment.id,
             title=submission.assignment.title,
+            course_id=submission.assignment.course_id,
             course_code=submission.assignment.course.code,
             due_date=submission.assignment.due_date,
             max_score=submission.assignment.max_score,
+            weight=submission.assignment.weight,
             is_overdue=submission.assignment.is_overdue,
             is_published=submission.assignment.is_published
         )
@@ -237,9 +239,11 @@ async def get_submission_by_id(
     assignment_data = AssignmentList(
         id=submission.assignment.id,
         title=submission.assignment.title,
+        course_id=submission.assignment.course_id,
         course_code=submission.assignment.course.code,
         due_date=submission.assignment.due_date,
         max_score=submission.assignment.max_score,
+        weight=submission.assignment.weight,
         is_overdue=submission.assignment.is_overdue,
         is_published=submission.assignment.is_published
     )

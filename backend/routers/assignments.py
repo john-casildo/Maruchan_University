@@ -88,9 +88,12 @@ async def get_assignments(
         result.append(AssignmentList(
             id=assignment.id,
             title=assignment.title,
+            description=assignment.description,
+            course_id=assignment.course_id,
             course_code=assignment.course.code,
             due_date=assignment.due_date,
             max_score=assignment.max_score,
+            weight=assignment.weight,
             is_overdue=assignment.is_overdue,
             is_published=assignment.is_published
         ))
@@ -148,9 +151,12 @@ async def get_my_assignments(
         result.append(AssignmentList(
             id=assignment.id,
             title=assignment.title,
+            description=assignment.description,
+            course_id=assignment.course_id,
             course_code=assignment.course.code,
             due_date=assignment.due_date,
             max_score=assignment.max_score,
+            weight=assignment.weight,
             is_overdue=assignment.is_overdue,
             is_published=assignment.is_published
         ))
@@ -372,15 +378,20 @@ async def delete_assignment(
                 detail="Solo el profesor del curso puede eliminar esta asignación"
             )
     
-    # Verificar si hay entregas
-    if len(assignment.submissions) > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"No se puede eliminar. Hay {len(assignment.submissions)} entregas asociadas"
-        )
+    # Eliminar entregas asociadas primero
+    from models import Submission
+    submissions_count = len(assignment.submissions)
+    if submissions_count > 0:
+        db.query(Submission).filter(Submission.assignment_id == assignment_id).delete()
     
     db.delete(assignment)
     db.commit()
+    
+    if submissions_count > 0:
+        return MessageResponse(
+            message=f"Asignación eliminada junto con {submissions_count} entrega(s)",
+            success=True
+        )
     
     return MessageResponse(
         message="Asignación eliminada exitosamente",

@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 
 # ==================== IMPORTAR LAS PÁGINAS ====================
-from student_pages import dashboard, courses, assignments, grades, profile
+from student_pages import dashboard, courses, assignments, grades, profile, community
 
 # ==================== ESTILOS CSS MEJORADOS ====================
 st.markdown("""
@@ -283,8 +283,8 @@ def run_student_app():
         st.caption("🎓 Estudiante")
         
         # Menú de navegación
-        menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Calificaciones", "Perfil"]
-        menu_icons = ["house-fill", "book-fill", "clipboard-check-fill", "graph-up", "person-fill"]
+        menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Calificaciones", "Comunidad", "Perfil"]
+        menu_icons = ["house-fill", "book-fill", "clipboard-check-fill", "graph-up", "chat-dots-fill", "person-fill"]
         
         default_index = 0
         if "student_menu_selection" in st.session_state:
@@ -330,6 +330,8 @@ def run_student_app():
         assignments.show()
     elif selected_menu == "Calificaciones": 
         grades.show()
+    elif selected_menu == "Comunidad":
+        community.show()
     elif selected_menu == "Perfil": 
         profile.show()
     else:

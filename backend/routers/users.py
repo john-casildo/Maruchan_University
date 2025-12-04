@@ -243,8 +243,16 @@ async def update_user(
             detail="Usuario no encontrado"
         )
     
-    # Actualizar solo los campos proporcionados
-    update_data = user_data.model_dump(exclude_unset=True)
+    # Actualizar solo los campos proporcionados y que no sean None
+    update_data = {k: v for k, v in user_data.model_dump(exclude_unset=True).items() if v is not None}
+    
+    # Verificar username único si se está actualizando
+    if "username" in update_data and update_data["username"] != user.username:
+        if db.query(User).filter(User.username == update_data["username"]).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El nombre de usuario ya está en uso"
+            )
     
     # Verificar email único si se está actualizando
     if "email" in update_data and update_data["email"] != user.email:
