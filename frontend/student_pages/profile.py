@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import textwrap
 import os
 from datetime import datetime
 import time
@@ -224,7 +225,7 @@ def render_animated_header():
 def render_profile_card(user):
     """Tarjeta de perfil interactiva"""
     
-    # Obtener URL de imagen
+    # 1. Preparar datos
     image_url = None
     if user.get('profile_pic_url'):
         base_url = API_URL.rstrip("/")
@@ -232,232 +233,50 @@ def render_profile_card(user):
             base_url = base_url.replace("backend", "localhost")
         image_url = f"{base_url}{user['profile_pic_url']}"
     
-    # Formatear datos
     carnet = user.get('carnet') if user.get('carnet') else 'No asignado'
     joined_date = format_date(user.get('joined_date'))
-    
-    st.markdown("""
-        <div class="fade-in hover-card" style="
-            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
-            padding: 40px;
-            border-radius: 25px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.5);
-            margin-bottom: 30px;
-        ">
-    """, unsafe_allow_html=True)
+    full_name = user.get('full_name', 'Usuario')
+    username = user.get('username', 'N/A')
+    email = user.get('email', 'N/A')
     
     col_photo, col_info = st.columns([1, 2])
     
     with col_photo:
-        # Foto de perfil con efecto hover
+        # Foto de perfil
         if image_url:
-            st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="
-                        width: 220px;
-                        height: 220px;
-                        margin: 0 auto;
-                        border-radius: 50%;
-                        overflow: hidden;
-                        border: 6px solid transparent;
-                        background: linear-gradient(135deg, #2a9d8f, #48cae4, #06d6a0);
-                        padding: 4px;
-                        box-shadow: 0 10px 30px rgba(42, 157, 143, 0.4);
-                        transition: all 0.3s ease;
-                        position: relative;
-                    " class="hover-card">
-                        <div style="
-                            width: 100%;
-                            height: 100%;
-                            border-radius: 50%;
-                            overflow: hidden;
-                            background: white;
-                        ">
-                            <img src="{image_url}" style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                            ">
-                        </div>
-                    </div>
-                    <div style="
-                        margin-top: 15px;
-                        font-weight: 600;
-                        color: #2a9d8f;
-                        font-size: 1rem;
-                    ">
-                        📸 Foto de Perfil
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            photo_html = f'<div style="text-align: center;"><div style="width: 220px; height: 220px; margin: 0 auto; border-radius: 50%; overflow: hidden; border: 6px solid transparent; background: linear-gradient(135deg, #2a9d8f, #48cae4, #06d6a0); padding: 4px; box-shadow: 0 10px 30px rgba(42, 157, 143, 0.4);"><div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: white;"><img src="{image_url}" style="width: 100%; height: 100%; object-fit: cover;"></div></div><div style="margin-top: 15px; font-weight: 600; color: #2a9d8f; font-size: 1rem;">📸 Foto de Perfil</div></div>'
         else:
-            st.markdown("""
-                <div style="text-align: center;">
-                    <div style="
-                        width: 220px;
-                        height: 220px;
-                        margin: 0 auto;
-                        border-radius: 50%;
-                        background: linear-gradient(135deg, #2a9d8f, #48cae4);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        box-shadow: 0 10px 30px rgba(42, 157, 143, 0.4);
-                        transition: all 0.3s ease;
-                    " class="hover-card pulse">
-                        <span style="font-size: 6rem; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));">👤</span>
-                    </div>
-                    <div style="
-                        margin-top: 15px;
-                        font-weight: 600;
-                        color: #2a9d8f;
-                        font-size: 1rem;
-                    ">
-                        📸 Sin foto de perfil
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            photo_html = '<div style="text-align: center;"><div style="width: 220px; height: 220px; margin: 0 auto; border-radius: 50%; background: linear-gradient(135deg, #2a9d8f, #48cae4); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(42, 157, 143, 0.4);"><span style="font-size: 6rem;">👤</span></div><div style="margin-top: 15px; font-weight: 600; color: #2a9d8f; font-size: 1rem;">📸 Sin foto de perfil</div></div>'
+        
+        st.markdown(photo_html, unsafe_allow_html=True)
     
     with col_info:
-        # Información del usuario - TODO EN UNA SOLA CADENA
-        st.markdown(f"""
-            <div style="padding: 20px;">
-                <h2 style="
-                    color: #1a1a2e;
-                    font-size: 2.8rem;
-                    font-weight: 900;
-                    margin: 0 0 20px 0;
-                    background: linear-gradient(135deg, #2a9d8f, #48cae4);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                ">
-                    {user.get('full_name', 'Usuario')}
-                </h2>
-                
-                <div style="margin-bottom: 20px;">
-                    <span style="
-                        background: linear-gradient(135deg, #48cae4, #0096c7);
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 20px;
-                        font-size: 0.85rem;
-                        font-weight: 600;
-                        margin-right: 5px;
-                        display: inline-block;
-                    ">🎓 Estudiante Activo</span>
-                    <span style="
-                        background: linear-gradient(135deg, #06d6a0, #06ffa5);
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 20px;
-                        font-size: 0.85rem;
-                        font-weight: 600;
-                        display: inline-block;
-                    ">✅ Verificado</span>
-                </div>
-                
-                <div style="
-                    background: linear-gradient(135deg, rgba(42, 157, 143, 0.08), rgba(72, 202, 228, 0.08));
-                    padding: 25px;
-                    border-radius: 15px;
-                    border-left: 4px solid #2a9d8f;
-                    margin-top: 20px;
-                ">
-                    <div style="margin-bottom: 18px;">
-                        <div style="display: flex; align-items: center;">
-                            <div style="
-                                width: 45px;
-                                height: 45px;
-                                background: linear-gradient(135deg, #2a9d8f, #48cae4);
-                                border-radius: 12px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                margin-right: 15px;
-                                box-shadow: 0 4px 10px rgba(42, 157, 143, 0.3);
-                            ">
-                                <span style="font-size: 1.5rem;">👤</span>
-                            </div>
-                            <div>
-                                <div style="color: #888; font-size: 0.8rem; font-weight: 600;">USUARIO</div>
-                                <div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{user.get('username', 'N/A')}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 18px;">
-                        <div style="display: flex; align-items: center;">
-                            <div style="
-                                width: 45px;
-                                height: 45px;
-                                background: linear-gradient(135deg, #48cae4, #0096c7);
-                                border-radius: 12px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                margin-right: 15px;
-                                box-shadow: 0 4px 10px rgba(72, 202, 228, 0.3);
-                            ">
-                                <span style="font-size: 1.5rem;">📧</span>
-                            </div>
-                            <div>
-                                <div style="color: #888; font-size: 0.8rem; font-weight: 600;">CORREO ELECTRÓNICO</div>
-                                <div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{user.get('email', 'N/A')}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 18px;">
-                        <div style="display: flex; align-items: center;">
-                            <div style="
-                                width: 45px;
-                                height: 45px;
-                                background: linear-gradient(135deg, #06d6a0, #06ffa5);
-                                border-radius: 12px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                margin-right: 15px;
-                                box-shadow: 0 4px 10px rgba(6, 214, 160, 0.3);
-                            ">
-                                <span style="font-size: 1.5rem;">🎓</span>
-                            </div>
-                            <div>
-                                <div style="color: #888; font-size: 0.8rem; font-weight: 600;">CARNET ESTUDIANTIL</div>
-                                <div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{carnet}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div style="display: flex; align-items: center;">
-                            <div style="
-                                width: 45px;
-                                height: 45px;
-                                background: linear-gradient(135deg, #ffb703, #fb8500);
-                                border-radius: 12px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                margin-right: 15px;
-                                box-shadow: 0 4px 10px rgba(255, 183, 3, 0.3);
-                            ">
-                                <span style="font-size: 1.5rem;">📅</span>
-                            </div>
-                            <div>
-                                <div style="color: #888; font-size: 0.8rem; font-weight: 600;">MIEMBRO DESDE</div>
-                                <div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{joined_date}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+        # Nombre con gradiente
+        st.markdown(f'<h2 style="color: #1a1a2e; font-size: 2.8rem; font-weight: 900; margin: 0 0 20px 0; background: linear-gradient(135deg, #2a9d8f, #48cae4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{full_name}</h2>', unsafe_allow_html=True)
+        
+        # Badges
+        st.markdown('<div style="margin-bottom: 20px;"><span style="background: linear-gradient(135deg, #48cae4, #0096c7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-right: 5px; display: inline-block;">🎓 Estudiante Activo</span><span style="background: linear-gradient(135deg, #06d6a0, #06ffa5); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block;">✅ Verificado</span></div>', unsafe_allow_html=True)
+        
+        # Contenedor de información
+        info_container = f'''<div style="background: linear-gradient(135deg, rgba(42, 157, 143, 0.08), rgba(72, 202, 228, 0.08)); padding: 25px; border-radius: 15px; border-left: 4px solid #2a9d8f; margin-top: 20px;">
+<div style="margin-bottom: 18px; display: flex; align-items: center;">
+<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #2a9d8f, #48cae4); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 4px 10px rgba(42, 157, 143, 0.3);"><span style="font-size: 1.5rem;">👤</span></div>
+<div><div style="color: #888; font-size: 0.8rem; font-weight: 600;">USUARIO</div><div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{username}</div></div>
+</div>
+<div style="margin-bottom: 18px; display: flex; align-items: center;">
+<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #48cae4, #0096c7); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 4px 10px rgba(72, 202, 228, 0.3);"><span style="font-size: 1.5rem;">📧</span></div>
+<div><div style="color: #888; font-size: 0.8rem; font-weight: 600;">CORREO ELECTRÓNICO</div><div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{email}</div></div>
+</div>
+<div style="margin-bottom: 18px; display: flex; align-items: center;">
+<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #06d6a0, #06ffa5); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 4px 10px rgba(6, 214, 160, 0.3);"><span style="font-size: 1.5rem;">🎓</span></div>
+<div><div style="color: #888; font-size: 0.8rem; font-weight: 600;">CARNET ESTUDIANTIL</div><div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{carnet}</div></div>
+</div>
+<div style="display: flex; align-items: center;">
+<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #ffb703, #fb8500); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 4px 10px rgba(255, 183, 3, 0.3);"><span style="font-size: 1.5rem;">📅</span></div>
+<div><div style="color: #888; font-size: 0.8rem; font-weight: 600;">MIEMBRO DESDE</div><div style="color: #1a1a2e; font-size: 1.15rem; font-weight: 700;">{joined_date}</div></div>
+</div>
+</div>'''
+        st.markdown(info_container, unsafe_allow_html=True)
 
 def render_stats_cards(user):
     """Tarjetas de estadísticas animadas"""
