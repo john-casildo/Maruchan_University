@@ -286,6 +286,12 @@ def run_student_app():
         menu_options = ["Dashboard", "Mis Cursos", "Tareas", "Calificaciones", "Comunidad", "Perfil"]
         menu_icons = ["house-fill", "book-fill", "clipboard-check-fill", "graph-up", "chat-dots-fill", "person-fill"]
         
+        # Verificar si hay una navegación forzada desde un botón
+        forced_navigation = st.session_state.get('force_menu_change')
+        if forced_navigation:
+            st.session_state.student_menu_selection = forced_navigation
+            st.session_state.force_menu_change = None  # Limpiar el flag
+        
         default_index = 0
         if "student_menu_selection" in st.session_state:
             try:
@@ -308,7 +314,12 @@ def run_student_app():
             }
         )
 
-        st.session_state.student_menu_selection = selected_menu
+        # Si hubo navegación forzada, usar ese valor; si no, usar lo que retorna option_menu
+        if forced_navigation:
+            current_page = forced_navigation
+        else:
+            current_page = selected_menu
+            st.session_state.student_menu_selection = selected_menu
 
         st.markdown("---")
         
@@ -322,17 +333,17 @@ def run_student_app():
             st.rerun()
 
     # Enrutamiento de vistas
-    if selected_menu == "Dashboard": 
+    if current_page == "Dashboard": 
         dashboard.show()
-    elif selected_menu == "Mis Cursos": 
+    elif current_page == "Mis Cursos": 
         courses.show()
-    elif selected_menu == "Tareas": 
+    elif current_page == "Tareas": 
         assignments.show()
-    elif selected_menu == "Calificaciones": 
+    elif current_page == "Calificaciones": 
         grades.show()
-    elif selected_menu == "Comunidad":
+    elif current_page == "Comunidad":
         community.show()
-    elif selected_menu == "Perfil": 
+    elif current_page == "Perfil": 
         profile.show()
     else:
         dashboard.show()

@@ -658,7 +658,7 @@ def show():
     col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
     with col_nav1:
         if st.button("⬅️ Volver al Dashboard", key="back_btn", use_container_width=True):
-            st.session_state.student_menu_selection = "Dashboard"
+            st.session_state.force_menu_change = "Dashboard"
             st.rerun()
     
     st.markdown("<br>", unsafe_allow_html=True)
@@ -691,7 +691,7 @@ def show():
     col_footer1, col_footer2, col_footer3 = st.columns([1, 1, 1])
     with col_footer2:
         if st.button("🏠 Regresar al Inicio", key="back_bottom", type="primary", use_container_width=True):
-            st.session_state.student_menu_selection = "Dashboard"
+            st.session_state.force_menu_change = "Dashboard"
             st.rerun()
 
 if __name__ == "__main__":

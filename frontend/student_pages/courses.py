@@ -19,7 +19,7 @@ def show():
     col_back, col_spacer = st.columns([1, 5])
     with col_back:
         if st.button("⬅️ Volver al Inicio", key="back_to_dashboard", type="secondary", use_container_width=True):
-            st.session_state.student_menu_selection = "Dashboard"
+            st.session_state.force_menu_change = "Dashboard"
             st.rerun()
     
     st.markdown("<br>", unsafe_allow_html=True)
@@ -190,7 +190,7 @@ def show():
         col_center1, col_center2, col_center3 = st.columns([2, 2, 2])
         with col_center2:
             if st.button("🏠 Regresar al Dashboard", key="back_to_dashboard_bottom", type="primary", use_container_width=True):
-                st.session_state.student_menu_selection = "Dashboard"
+                st.session_state.force_menu_change = "Dashboard"
                 st.rerun()
     else:
         # Mensaje cuando no hay cursos
@@ -216,5 +216,5 @@ def show():
         col_center1, col_center2, col_center3 = st.columns([2, 2, 2])
         with col_center2:
             if st.button("🏠 Regresar al Dashboard", key="back_no_courses", type="primary", use_container_width=True):
-                st.session_state.student_menu_selection = "Dashboard"
+                st.session_state.force_menu_change = "Dashboard"
                 st.rerun()
